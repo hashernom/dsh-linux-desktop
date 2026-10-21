@@ -25,8 +25,8 @@ const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
 
-const APP_NAME = 'DeepSeek Harness'
-const APP_ID = 'deepseek-harness'
+const APP_NAME = 'DSH Desktop'
+const APP_ID = 'dsh-linux-desktop'
 const APP_DIR = __dirname
 const HOME = os.homedir()
 
@@ -36,6 +36,29 @@ app.setName(APP_NAME)
 if (process.platform === 'linux') {
   app.setDesktopName(`${APP_ID}.desktop`)
   app.commandLine.appendSwitch('class', APP_ID)
+}
+
+// Flags de CLI antes de tocar Electron.
+const cliArgs = process.argv.slice(1).filter((arg) => arg.startsWith('-'))
+if (cliArgs.includes('--version') || cliArgs.includes('-v')) {
+  process.stdout.write(`${app.getVersion()}\n`)
+  process.exit(0)
+}
+if (cliArgs.includes('--help') || cliArgs.includes('-h')) {
+  process.stdout.write(
+    [
+      'DSH Desktop — shell de escritorio no oficial para DeepSeek Harness.',
+      '',
+      'Uso:',
+      '  dsh-desktop                 abre la aplicación',
+      '  dsh-desktop --version       muestra la versión del envoltorio',
+      '  dsh-desktop --help          esta ayuda',
+      '',
+      'Variables: DSH_BIN, DSH_DESKTOP_SANDBOX, DSH_DESKTOP_NO_SANDBOX',
+      '',
+    ].join('\n'),
+  )
+  process.exit(0)
 }
 
 // Perfil propio, sin el espacio que `productName` metería en ~/.config.
@@ -391,6 +414,50 @@ function isInternalUrl(target) {
 }
 
 
+// ------------------------------------------------------------- inicio auto
+
+const AUTOSTART_FILE = path.join(
+  process.env.XDG_CONFIG_HOME || path.join(HOME, '.config'),
+  'autostart',
+  `${APP_ID}.desktop`,
+)
+
+function autostartEnabled() {
+  try {
+    return fs.existsSync(AUTOSTART_FILE)
+  } catch {
+    return false
+  }
+}
+
+function setAutostart(enabled) {
+  try {
+    if (!enabled) {
+      fs.rmSync(AUTOSTART_FILE, { force: true })
+      return
+    }
+    fs.mkdirSync(path.dirname(AUTOSTART_FILE), { recursive: true })
+    const exec = `"${process.execPath}" "${APP_DIR}"`
+    fs.writeFileSync(
+      AUTOSTART_FILE,
+      [
+        '[Desktop Entry]',
+        'Type=Application',
+        `Name=${APP_NAME}`,
+        'Comment=Shell de escritorio no oficial para DeepSeek Harness',
+        `Exec=${exec}`,
+        `Icon=${APP_ID}`,
+        'Terminal=false',
+        'X-GNOME-Autostart-enabled=true',
+        'Hidden=false',
+        '',
+      ].join('\n'),
+    )
+  } catch (error) {
+    trace(`no se pudo cambiar el autoarranque: ${String(error)}`)
+  }
+}
+
 // ------------------------------------------------------------------ bandeja
 
 function trayStatusLabel() {
@@ -483,6 +550,12 @@ function buildTrayMenu() {
         savePreferences({ closeToTray: item.checked })
         refreshTray()
       },
+    },
+    {
+      label: 'Iniciar con la sesión',
+      type: 'checkbox',
+      checked: autostartEnabled(),
+      click: (item) => setAutostart(item.checked),
     },
     { type: 'separator' },
     {

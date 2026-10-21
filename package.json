@@ -1,14 +1,18 @@
 {
-  "name": "deepseek-harness-desktop",
-  "productName": "DeepSeek Harness",
+  "name": "dsh-linux-desktop",
+  "productName": "DSH Desktop",
   "version": "1.0.0",
-  "private": true,
-  "description": "Aplicación de escritorio de DeepSeek Harness (envoltorio nativo de dsh web)",
+  "description": "Unofficial Linux desktop shell for DeepSeek Harness — an Electron wrapper around `dsh web`",
   "main": "main.js",
-  "author": "santiafanador24",
+  "private": true,
   "license": "MIT",
+  "author": "santiafanador24",
+  "scripts": {
+    "start": "electron .",
+    "capture": "electron --no-sandbox tools/capture.js"
+  },
   "devDependencies": {
-    "@resvg/resvg-js": "^2.6.2",
-    "electron": "^45.0.0"
+    "electron": "^45.0.0",
+    "@resvg/resvg-js": "^2.6.2"
   }
 }

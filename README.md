@@ -1,90 +1,136 @@
-# DeepSeek Harness — app de escritorio
+# DSH Desktop (Linux)
 
-Envoltorio Electron de `dsh web`: arranca su propio servidor local, lo carga en
-una ventana nativa y se lo lleva por delante al cerrar. No usa el navegador.
+**Unofficial Linux desktop shell for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).**
 
-## Uso
+A native Electron window around `dsh web`: no browser, no tabs, its own icon,
+system tray and desktop integration. It reuses the `dsh` you already have
+installed via npm, so your sessions, MCP servers, skills and credentials stay
+in `~/.dsh` exactly as they are.
 
-- Menú de aplicaciones → **DeepSeek Harness**
-- Icono del escritorio → **DeepSeek Harness**
+> Not affiliated with, endorsed by, or supported by DeepSeek. See [NOTICE](NOTICE.md).
+
+![Splash](docs/splash.png)
+
+## Why
+
+The official Desktop app ships for macOS and Windows only. This project fills
+the gap on Linux by wrapping the Web profile the CLI already provides, without
+building the monorepo and without touching your existing DSH setup.
+
+## Features
+
+- **Native window** with its own icon — no browser, no address bar.
+- **Own server per launch**: starts `dsh web --no-open --port 0`, parses the
+  authenticated URL and loads it; on quit it kills the whole process group
+  (server plus every MCP child).
+- **System tray**: closing the window hides it and keeps the session warm;
+  reopen instantly. Menu with open, new session, restart server, logs and quit.
+- **Desktop integration**: `.desktop` entry, hicolor icons, `dsh-desktop`
+  command, optional start-at-login.
+- **Updates**: checks `@deepseek-ai/dsh` on npm (manual or silent daily),
+  installs with npm and restarts the server.
+- **Sandbox aware**: uses Chromium's sandbox when the system allows it and
+  falls back to `--no-sandbox` on Ubuntu 24.04+ setups where AppArmor blocks
+  unprivileged user namespaces.
+
+## Requirements
+
+- Linux (X11 or Wayland; developed on Ubuntu 26.04 + KDE Plasma 6 Wayland)
+- Node.js 20+ and npm
+- `dsh` installed: `npm i -g @deepseek-ai/dsh`
+
+## Install
+
+```bash
+git clone https://github.com/<you>/dsh-linux-desktop.git
+cd dsh-linux-desktop
+./install.sh
+```
+
+`install.sh` installs to `~/.local/share/dsh-linux-desktop`, downloads Electron
+(~275 MB) on first run, and registers the launcher, icons and desktop entries.
+
+Install in place (no copy, handy while hacking on it):
+
+```bash
+DSH_DESKTOP_INSTALL_DIR=$PWD ./install.sh
+```
+
+Uninstall:
+
+```bash
+./uninstall.sh        # keeps ~/.dsh and the app state directory
+```
+
+## Usage
+
+- App menu → **DSH Desktop**
+- Desktop icon → **DSH Desktop**
 - Terminal → `dsh-desktop`
-- Bandeja del sistema → icono de la ballena junto al reloj
 
-## Bandeja del sistema
+Closing the window hides it to the tray. Use **Salir** in the tray menu to quit
+for real. Uncheck *"Cerrar la ventana la oculta"* to go back to close-to-quit.
 
-Al cerrar la ventana la app **no se cierra**: se oculta a la bandeja y el
-servidor sigue vivo, así que reabrir es instantáneo. El menú del icono tiene
-*Abrir*, *Nueva sesión*, *Reiniciar servidor*, *Abrir registros* y *Salir*.
+## Updates
 
-El interruptor **«Cerrar la ventana la oculta»** permite volver al
-comportamiento clásico (cerrar = salir) sin tocar código. Se guarda en
-`preferences.json` dentro del directorio de estado.
+- **Manual**: *Ayuda → Buscar actualizaciones…* (or the same item in the tray).
+  Shows installed vs available version with *Actualizar ahora* / *Ver novedades*.
+- **Automatic**: one silent check per 12 h; notifies once per new version and
+  never installs on its own. Toggle with *Ayuda → Comprobar al iniciar*.
 
-Si el escritorio no soporta bandeja, la app lo detecta y desactiva el modo
-automáticamente para que cerrar la ventana siga saliendo.
+Updating runs `npm install -g @deepseek-ai/dsh@latest` using the npm that owns
+the detected `dsh` binary (for example the nvm one), then restarts the local
+server.
 
-## Cómo funciona
+The wrapper itself does not self-update: `git pull` and, if dependencies
+changed, `npm install`.
 
-1. Resuelve el binario `dsh` (`DSH_BIN`, `~/.local/bin`, nvm, `PATH`).
-2. Lanza `dsh web --no-open --port 0` con su propio grupo de procesos.
-3. Lee del stdout la línea `dsh web: http://127.0.0.1:PUERTO/?token=…`.
-4. Carga esa URL en la ventana; mientras tanto muestra un splash.
-5. Al salir manda `SIGTERM` al grupo (servidor + MCPs) y `SIGKILL` si no cede.
+## How it works
 
-Comparte `~/.dsh` con el CLI: mismas sesiones, MCPs, credenciales y perfiles.
+1. Resolves the `dsh` binary (`DSH_BIN`, `~/.local/bin`, nvm, `PATH`).
+2. Spawns `dsh web --no-open --port 0` in its own process group.
+3. Reads the `dsh web: http://127.0.0.1:PORT/?token=…` line from stdout.
+4. Loads that URL in the window; a splash covers the boot.
+5. On quit, sends `SIGTERM` to the group and `SIGKILL` after 4 s.
 
-## Rutas
+## Environment variables
 
-| Qué | Dónde |
+| Variable | Effect |
 |---|---|
-| App | `~/.local/share/deepseek-harness-desktop/` |
-| Lanzador | `~/.local/bin/dsh-desktop` |
-| Entrada de menú | `~/.local/share/applications/deepseek-harness.desktop` |
-| Iconos | `~/.local/share/icons/hicolor/*/apps/deepseek-harness.*` |
-| Estado, preferencias y logs | `~/.local/state/deepseek-harness/` |
-| Perfil de Chromium | `~/.config/deepseek-harness/` |
+| `DSH_BIN` | Explicit path to the `dsh` binary |
+| `DSH_DESKTOP_INSTALL_DIR` | Install target for `install.sh` |
+| `DSH_DESKTOP_SANDBOX=1` | Force Chromium's sandbox |
+| `DSH_DESKTOP_NO_SANDBOX=1` | Force `--no-sandbox` |
+| `DSH_DESKTOP_CAPTURE` | Capture the window to a PNG and exit (tests) |
+| `DSH_DESKTOP_CAPTURE_DELAY` | Milliseconds before capturing (default 6000) |
+| `DSH_DESKTOP_TEST_HIDE` | Close the window and verify the tray path |
+| `DSH_DESKTOP_TEST_UPDATE` | Run the updater check and exit |
 
-## Actualizaciones
+## Files
 
-La app comprueba `@deepseek-ai/dsh` contra el registro de npm:
-
-- **Manual**: menú *Ayuda → Buscar actualizaciones…* o el mismo ítem en la bandeja.
-  Muestra versión instalada y disponible, con botones *Actualizar ahora*, *Ver novedades* y *Más tarde*.
-- **Automática**: una comprobación silenciosa al arrancar, como mucho cada 12 h.
-  Si hay versión nueva avisa con una notificación (una vez por versión) y no instala nada sola.
-
-Actualizar ejecuta `npm install -g @deepseek-ai/dsh@latest` con el npm que corresponde
-al `dsh` detectado (por ejemplo el de nvm) y, si tiene éxito, reinicia el servidor local.
-Desmarcar *Ayuda → Comprobar al iniciar* desactiva la comprobación automática.
-
-La app en sí (Electron) no se autoactualiza: para eso, haz `git pull` en el repo y
-`npm install` si cambiaron dependencias.
-
-## Variables
-
-| Variable | Efecto |
+| What | Where |
 |---|---|
-| `DSH_BIN` | Ruta explícita al binario `dsh` |
-| `DSH_DESKTOP_SANDBOX=1` | Fuerza el sandbox de Chromium |
-| `DSH_DESKTOP_NO_SANDBOX=1` | Fuerza `--no-sandbox` (equipos sin namespaces de usuario) |
-| `DSH_DESKTOP_CAPTURE` | Ruta PNG: captura la ventana y sale (pruebas) |
-| `DSH_DESKTOP_CAPTURE_DELAY` | ms de espera antes de capturar (por defecto 6000) |
-| `DSH_DESKTOP_TEST_HIDE` | Prueba: cierra la ventana y verifica que queda en la bandeja |
-| `DSH_DESKTOP_TEST_UPDATE` | Prueba: ejecuta el comprobador de actualizaciones y sale |
+| App | `~/.local/share/dsh-linux-desktop/` |
+| Launcher | `~/.local/bin/dsh-desktop` |
+| Menu entry | `~/.local/share/applications/dsh-linux-desktop.desktop` |
+| Icons | `~/.local/share/icons/hicolor/*/apps/dsh-linux-desktop.*` |
+| State, preferences, logs | `~/.local/state/dsh-linux-desktop/` |
+| Chromium profile | `~/.config/dsh-linux-desktop/` |
 
-## Diagnóstico
+## Troubleshooting
 
 ```bash
-tail -f ~/.local/state/deepseek-harness/logs/desktop.log   # arranque y errores
-tail -f ~/.local/state/deepseek-harness/logs/server.log    # salida de dsh web
+tail -f ~/.local/state/dsh-linux-desktop/logs/desktop.log  # app boot and errors
+tail -f ~/.local/state/dsh-linux-desktop/logs/server.log   # dsh web output
 ```
 
-El sandbox de Chromium necesita namespaces de usuario sin privilegios o un
-`chrome-sandbox` setuid. Si ninguno está disponible, el lanzador cae a
-`--no-sandbox` para que la app no muera en silencio.
+**The window does not open.** Run `dsh-desktop` in a terminal and read stderr.
+On systems that block unprivileged user namespaces, start with
+`DSH_DESKTOP_NO_SANDBOX=1 dsh-desktop`.
 
-## Desinstalar
+**"No encuentro el ejecutable dsh".** Install it (`npm i -g @deepseek-ai/dsh`)
+or point `DSH_BIN` at it.
 
-```bash
-./uninstall.sh
-```
+## License
+
+MIT. See [LICENSE](LICENSE).
