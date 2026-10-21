@@ -1,0 +1,14 @@
+{
+  "name": "deepseek-harness-desktop",
+  "productName": "DeepSeek Harness",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicación de escritorio de DeepSeek Harness (envoltorio nativo de dsh web)",
+  "main": "main.js",
+  "author": "santiafanador24",
+  "license": "MIT",
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "electron": "^45.0.0"
+  }
+}

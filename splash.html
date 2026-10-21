@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'" />
+    <title>DeepSeek Harness</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07090f;
+        --ink: #eef1f8;
+        --muted: #8b93a7;
+        --blue: #4d6bfe;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(900px 520px at 50% 34%, rgba(77, 107, 254, 0.22), transparent 62%),
+          radial-gradient(600px 380px at 50% 100%, rgba(77, 107, 254, 0.08), transparent 70%),
+          var(--bg);
+        color: var(--ink);
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+        overflow: hidden;
+      }
+
+      main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 22px;
+        padding: 40px;
+        transform: translateY(-12px);
+      }
+
+      .logo {
+        width: 112px;
+        height: 112px;
+        border-radius: 26px;
+        filter: drop-shadow(0 18px 40px rgba(77, 107, 254, 0.35));
+        animation: breathe 3.6s ease-in-out infinite;
+      }
+
+      @keyframes breathe {
+        0%,
+        100% {
+          transform: translateY(0) scale(1);
+        }
+        50% {
+          transform: translateY(-5px) scale(1.012);
+        }
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 25px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      p.status {
+        margin: -8px 0 0;
+        font-size: 13.5px;
+        color: var(--muted);
+        min-height: 18px;
+      }
+
+      .track {
+        width: 240px;
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.07);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .track::after {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 38%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--blue), #8ea2ff, transparent);
+        animation: slide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+      }
+
+      @keyframes slide {
+        0% {
+          left: -40%;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+
+      footer {
+        position: fixed;
+        bottom: 18px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #4b5266;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img class="logo" src="assets/icon-512.png" alt="DeepSeek" />
+      <h1>DeepSeek Harness</h1>
+      <p class="status" id="status">Arrancando el servidor local…</p>
+      <div class="track"></div>
+    </main>
+    <footer id="footer">servidor local</footer>
+
+    <script>
+      const statusEl = document.getElementById('status')
+      const footerEl = document.getElementById('footer')
+
+      function render(status) {
+        if (!status) return
+        if (status.message) statusEl.textContent = status.message
+        if (status.phase === 'starting') {
+          footerEl.textContent = status.binary ? `dsh · ${status.binary}` : 'servidor local'
+        }
+      }
+
+      if (window.dshDesktop) {
+        window.dshDesktop.getStatus().then(render).catch(() => {})
+        window.dshDesktop.onStatus(render)
+      }
+    </script>
+  </body>
+</html>

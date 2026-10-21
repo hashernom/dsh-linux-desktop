@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Lanzador de DeepSeek Harness (app de escritorio Electron).
+set -euo pipefail
+
+APP_DIR="${DSH_DESKTOP_HOME:-$HOME/.local/share/deepseek-harness-desktop}"
+ELECTRON="$APP_DIR/node_modules/electron/dist/electron"
+
+if [[ ! -x "$ELECTRON" ]]; then
+  echo "deepseek-harness: no encuentro Electron en $ELECTRON" >&2
+  echo "Reinstala con: cd \"$APP_DIR\" && npm install" >&2
+  exit 1
+fi
+
+# Que el servidor hijo encuentre node/dsh aunque el .desktop arranque con PATH mínimo.
+for d in "$HOME/.nvm/versions/node"/*/bin; do
+  [[ -d "$d" ]] && PATH="$d:$PATH"
+done
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+
+# Sandbox de Chromium: se usa si el sistema lo permite (chrome-sandbox setuid o
+# namespaces de usuario); si no, se arranca sin él para que la app no muera en silencio.
+sandbox_args=()
+if [[ "${DSH_DESKTOP_NO_SANDBOX:-0}" == "1" ]]; then
+  sandbox_args+=(--no-sandbox)
+elif [[ "${DSH_DESKTOP_SANDBOX:-0}" != "1" ]]; then
+  chrome_sandbox="$APP_DIR/node_modules/electron/dist/chrome-sandbox"
+  if [[ ! -u "$chrome_sandbox" ]] && ! unshare -Ur true >/dev/null 2>&1; then
+    sandbox_args+=(--no-sandbox)
+  fi
+fi
+
+exec "$ELECTRON" "${sandbox_args[@]}" "$APP_DIR" "$@"
